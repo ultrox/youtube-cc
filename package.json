@@ -10,7 +10,7 @@
     "node": ">=22"
   },
   "webStore": {
-    "chrome": ""
+    "chrome": "lekdckmokddhnlkdkbfihcfpplcomkok"
   },
   "scripts": {
     "dev": "wxt",

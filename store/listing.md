@@ -1,6 +1,7 @@
 # Chrome Web Store listing: My Subtitles for YouTube
 
-Working name. Not uploaded yet (docs/publishing.md, "First release").
+Item `lekdckmokddhnlkdkbfihcfpplcomkok`: https://chromewebstore.google.com/detail/lekdckmokddhnlkdkbfihcfpplcomkok
+0.1.0 uploaded by hand and submitted for review on 2026-11-18. Screenshot: `store/screenshots/`.
 
 ## Summary (from package.json `description`, ≤132 chars)
 
@@ -34,7 +35,7 @@ settings whenever you want one.
 
 STAYS OUT OF THE WAY
 • YouTube's own CC button and the C shortcut work as always.
-• Works in fullscreen and theater mode, and with the keyboard (arrow keys, Enter, Escape).
+• Works with the keyboard (arrow keys, Enter, Escape).
 • No account, no tracking, no network requests: it only talks to the YouTube player on the page.
 
 Free and open source: https://github.com/ultrox/youtube-cc
@@ -65,8 +66,6 @@ No remote code. Nothing is sent anywhere.
 Collects nothing. The only stored data is the list of language codes the user picked and one on/off
 setting (chrome.storage.local, on the device).
 
-## Screenshots to make (1280×800)
+## Screenshots (1280×800)
 
-1. Panel open over a video: Off, Deutsch (Subtitles ✓), English, Bosanski (Auto-translated).
-2. Edit languages with a search ("srp") and results.
-3. Before/after: YouTube's Settings → Subtitles → Auto-translate list next to the short panel.
+1. `store/screenshots/1-panel.jpg`: the panel over a TED talk, Bosanski auto-translated ✓, Original audio on.
