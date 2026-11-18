@@ -21,6 +21,9 @@ export interface PickerOptions {
   native: HTMLElement;
   languages: () => string[];
   setLanguages: (languages: string[]) => Promise<void>;
+  /** "Original audio": never start a video in a dub. */
+  originalAudio: () => boolean;
+  setOriginalAudio: (on: boolean) => Promise<void>;
 }
 
 export interface Picker {
@@ -28,7 +31,8 @@ export interface Picker {
   readonly chevronHost: HTMLElement;
   /** Still in YouTube's control bar, right after the CC button? */
   attached(): boolean;
-  languagesChanged(): void;
+  /** The languages or the audio setting changed (here or in another tab). */
+  settingsChanged(): void;
   /** Video changed: drop what we knew about the old one. */
   reset(): void;
   destroy(): void;
@@ -49,7 +53,14 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const CONTAINED = ['click', 'dblclick', 'mousedown', 'mouseup', 'pointerup', 'contextmenu', 'wheel'];
 const KEYS = ['keydown', 'keyup', 'keypress'];
 
-export function mountPicker({ player, native, languages, setLanguages }: PickerOptions): Picker {
+export function mountPicker({
+  player,
+  native,
+  languages,
+  setLanguages,
+  originalAudio,
+  setOriginalAudio,
+}: PickerOptions): Picker {
   const controller = new AbortController();
   const { signal } = controller;
   const on = <E extends Event>(
@@ -186,6 +197,27 @@ export function mountPicker({ player, native, languages, setLanguages }: PickerO
     }
 
     view.append(el('div', { class: 'separator' }));
+    const audio = el(
+      'button',
+      {
+        type: 'button',
+        class: 'row',
+        role: 'switch',
+        'aria-checked': String(originalAudio()),
+        'data-key': 'audio',
+      },
+      el('span', { class: 'check icon' }, icon('audio')),
+      el(
+        'span',
+        { class: 'label' },
+        el('span', { class: 'name' }, t.originalAudio),
+        el('span', { class: 'local' }, t.originalAudioHint),
+      ),
+      el('span', { class: 'switch', 'aria-hidden': 'true' }),
+    );
+    audio.title = t.originalAudioTitle;
+    audio.addEventListener('click', () => void setOriginalAudio(!originalAudio()));
+    view.append(audio);
     const edit = el(
       'button',
       { type: 'button', class: 'row', 'data-key': 'edit' },
@@ -510,7 +542,7 @@ export function mountPicker({ player, native, languages, setLanguages }: PickerO
     native,
     chevronHost,
     attached: () => native.isConnected && native.nextElementSibling === chevronHost && panelHost.isConnected,
-    languagesChanged() {
+    settingsChanged() {
       if (!open) return;
       if (view === 'main') render();
       else fillEditList();

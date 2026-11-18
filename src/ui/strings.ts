@@ -14,6 +14,10 @@ export const t = {
   notReady: 'The player isn’t ready yet.',
   retry: 'Try again',
   failed: 'YouTube didn’t switch the subtitles. Try again.',
+  originalAudio: 'Original audio',
+  originalAudioHint: 'never dubbed',
+  originalAudioTitle:
+    'Start every video in the language it was made in, even when YouTube would play a dub. You can still pick a dub in YouTube’s settings.',
   edit: 'Edit languages',
   addFirst: 'Add your languages',
   back: 'Back',

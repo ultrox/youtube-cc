@@ -5,6 +5,13 @@ import type { PlayerState } from '../tracks';
 
 export const REQUEST_EVENT = 'my-subtitles:request';
 export const RESPONSE_EVENT = 'my-subtitles:response';
+/** Content script → page script, on load and on every change: the user's settings for the player. */
+export const SETTINGS_EVENT = 'my-subtitles:settings';
+
+export interface PageSettings {
+  /** Start every video in its original audio, never in a dub. */
+  originalAudio: boolean;
+}
 
 export type Request =
   | { id: number; action: 'state' }

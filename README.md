@@ -8,6 +8,9 @@ auto-translated, or not at all). One click switches.
 - Your languages start as your browser's languages; **Edit languages** searches all of YouTube's
   subtitle languages by their own name, your language's name for them or the English one, and lets
   you reorder or remove them. They're saved in `chrome.storage.local`.
+- **Original audio** (on by default, a switch in the panel): when YouTube starts a video in a dub
+  (it picks one to match your language), the extension switches to the original audio. Only in the
+  first seconds of each video: a dub you pick yourself in YouTube's settings stays.
 - YouTube's own CC button and the <kbd>C</kbd> shortcut keep working; the extension never hides or
   replaces them.
 - No account, no network requests, no tracking ([store/privacy.md](store/privacy.md)).
@@ -40,6 +43,10 @@ Two content scripts on `www.youtube.com`:
 - `entrypoints/content/` runs in the **isolated world** (storage, UI): it mounts the chevron after
   `.ytp-subtitles-button` and the panel inside the player (so it works in fullscreen), both in shadow
   roots. The two talk over DOM events with JSON payloads (`src/bridge/`).
+
+Original audio (`src/audio.ts`): each of the player's audio tracks (`getAvailableAudioTracks()`)
+carries tags in its id, `acont=original` or `acont=dubbed`; the page script checks every 250 ms during
+a video's first 4 seconds and calls `setAudioTrack(original)` only if a dub is playing.
 
 Picking a language (`src/tracks.ts`): uploaded subtitles in that language, then another variant of it
 (`pt-PT` for Portuguese), then auto-generated ones, then YouTube's auto-translate from the

@@ -34,6 +34,8 @@
       });
       const TRACKS = {
         many: [t('de', '', 'German'), t('en', '', 'English'), t('en', 'asr', 'English'), t('fr', '', 'French')],
+        dub: [t('en', 'asr', 'English')],
+        'dub-original': [t('en', 'asr', 'English')],
         asr: [t('en', 'asr', 'English')],
         none: [],
       }[scenario];
@@ -65,6 +67,35 @@
         show(value);
       };
       cc.addEventListener('click', () => show(current ? null : TRACKS[0] ?? null));
+
+      // Audio tracks, as the real player builds them: "251;" + base64url(xtags: acont, lang), plus
+      // details under a minified key. "dub": English original, YouTube starts the German dub.
+      const xtags = (tags) => {
+        const bytes = [];
+        for (const [k, v] of Object.entries(tags)) {
+          const kb = [...new TextEncoder().encode(k)];
+          const vb = [...new TextEncoder().encode(v)];
+          const pair = [0x0a, kb.length, ...kb, 0x12, vb.length, ...vb];
+          bytes.push(0x0a, pair.length, ...pair);
+        }
+        return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      };
+      const audio = (lang, original) => ({
+        id: `251;${xtags({ acont: original ? 'original' : 'dubbed', lang })}`,
+        Xb: { id: `${lang}.${original ? 4 : 3}`, name: original ? `${lang} original` : lang },
+      });
+      // "dub-original": dubs exist, but the original plays; the player then reports a placeholder.
+      const AUDIO = scenario.startsWith('dub') ? [audio('de', false), audio('en', true), audio('fr', false)] : [];
+      let currentAudio = scenario === 'dub' ? AUDIO[0] : { id: '251', Xb: { id: 'und', name: 'Default' } };
+      window.audioCalls = [];
+      player.getAvailableAudioTracks = () => AUDIO;
+      player.getAudioTrack = () => currentAudio;
+      player.setAudioTrack = (track) => {
+        window.audioCalls.push(track.Xb.id);
+        currentAudio = track;
+        return true;
+      };
+      window.audioNow = () => currentAudio.Xb.id;
       player.addEventListener('click', () => window.playerClicks++);
       // YouTube's shortcuts listen on the document.
       document.addEventListener('keydown', (e) => window.shortcutKeys.push(e.key));

@@ -27,6 +27,11 @@ YOUR LANGUAGES, YOUR ORDER
 (type "deutsch" or "german"), then reorder or remove.
 • Saved in your browser. Works the same on every video.
 
+NO SURPRISE DUBBING
+• YouTube now plays many videos dubbed into your language. "Original audio" (on by default) starts
+every video in the language it was made in. Turn it off in the panel, or pick a dub in YouTube's
+settings whenever you want one.
+
 STAYS OUT OF THE WAY
 • YouTube's own CC button and the C shortcut work as always.
 • Works in fullscreen and theater mode, and with the keyboard (arrow keys, Enter, Escape).
@@ -47,16 +52,18 @@ CC button.
 
 ## Permission justifications
 
-- `storage`: saves the user's list of subtitle languages on their device.
+- `storage`: saves the user's list of subtitle languages and the "Original audio" setting on their
+  device.
 - Content scripts on `https://www.youtube.com/*`: add the language picker next to the video player's CC
-  button and switch the player's subtitle track when the user picks a language.
+  button, switch the player's subtitle track when the user picks a language, and (if "Original audio"
+  is on) switch a dubbed audio track to the video's original one.
 
 No remote code. Nothing is sent anywhere.
 
 ## Data
 
-Collects nothing. The only stored data is the list of language codes the user picked
-(chrome.storage.local, on the device).
+Collects nothing. The only stored data is the list of language codes the user picked and one on/off
+setting (chrome.storage.local, on the device).
 
 ## Screenshots to make (1280×800)
 

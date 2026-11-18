@@ -1,18 +1,38 @@
 // Isolated world: finds YouTube's player and puts the picker next to its CC button.
 import './page.css';
-import { loadLanguages, onLanguagesChanged, saveLanguages } from '@/src/settings';
+import { type PageSettings, SETTINGS_EVENT } from '@/src/bridge/protocol';
+import {
+  loadLanguages,
+  loadOriginalAudio,
+  onLanguagesChanged,
+  onOriginalAudioChanged,
+  saveLanguages,
+  saveOriginalAudio,
+} from '@/src/settings';
 import { mountPicker, type Picker } from '@/src/ui/picker';
 
 export default defineContentScript({
   matches: ['https://www.youtube.com/*'],
   runAt: 'document_idle',
   async main(ctx) {
-    let languages = await loadLanguages();
+    let [languages, originalAudio] = await Promise.all([loadLanguages(), loadOriginalAudio()]);
     let picker: Picker | null = null;
 
-    const stopWatching = onLanguagesChanged((next) => {
+    // The page script (player.content.ts) acts on the player; tell it what the user wants.
+    const sendSettings = () => {
+      const settings: PageSettings = { originalAudio };
+      document.dispatchEvent(new CustomEvent(SETTINGS_EVENT, { detail: JSON.stringify(settings) }));
+    };
+    sendSettings();
+
+    const stopLanguages = onLanguagesChanged((next) => {
       languages = next;
-      picker?.languagesChanged();
+      picker?.settingsChanged();
+    });
+    const stopAudio = onOriginalAudioChanged((next) => {
+      originalAudio = next;
+      sendSettings();
+      picker?.settingsChanged();
     });
 
     function attach() {
@@ -28,8 +48,15 @@ export default defineContentScript({
         languages: () => languages,
         setLanguages: async (next) => {
           languages = next; // at once; storage.onChanged follows and agrees
-          picker?.languagesChanged();
+          picker?.settingsChanged();
           await saveLanguages(next);
+        },
+        originalAudio: () => originalAudio,
+        setOriginalAudio: async (next) => {
+          originalAudio = next;
+          sendSettings();
+          picker?.settingsChanged();
+          await saveOriginalAudio(next);
         },
       });
     }
@@ -40,7 +67,11 @@ export default defineContentScript({
     ctx.addEventListener(document, 'yt-navigate-start', () => picker?.reset());
     ctx.addEventListener(document, 'yt-navigate-finish', attach);
     ctx.onInvalidated(() => {
-      stopWatching();
+      stopLanguages();
+      stopAudio();
+      // An old copy of this script (extension updated) must not keep switching audio.
+      originalAudio = false;
+      sendSettings();
       picker?.destroy();
       picker = null;
     });

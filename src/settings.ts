@@ -32,6 +32,28 @@ export async function saveLanguages(languages: readonly string[]) {
   await browser.storage.local.set({ [LANGUAGES_KEY]: [...languages] });
 }
 
+export const ORIGINAL_AUDIO_KEY = 'originalAudio';
+
+/** Never start a video in a dub. On unless the user turned it off. */
+export const parseOriginalAudio = (raw: unknown) => raw !== false;
+
+export async function loadOriginalAudio(): Promise<boolean> {
+  return parseOriginalAudio((await browser.storage.local.get(ORIGINAL_AUDIO_KEY))[ORIGINAL_AUDIO_KEY]);
+}
+
+export async function saveOriginalAudio(on: boolean) {
+  await browser.storage.local.set({ [ORIGINAL_AUDIO_KEY]: on });
+}
+
+export function onOriginalAudioChanged(listener: (on: boolean) => void): () => void {
+  const handle = (changes: Record<string, { newValue?: unknown }>, area: string) => {
+    if (area === 'local' && ORIGINAL_AUDIO_KEY in changes)
+      listener(parseOriginalAudio(changes[ORIGINAL_AUDIO_KEY]?.newValue));
+  };
+  browser.storage.onChanged.addListener(handle);
+  return () => browser.storage.onChanged.removeListener(handle);
+}
+
 /** Changes from any tab (or the user's other windows). */
 export function onLanguagesChanged(listener: (languages: string[]) => void): () => void {
   const handle = (changes: Record<string, { newValue?: unknown }>, area: string) => {

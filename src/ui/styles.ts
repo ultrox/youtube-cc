@@ -143,6 +143,31 @@ export const PANEL_CSS = `
   .detail.loading { width: 64px; height: 10px; border-radius: 5px; background: rgba(255, 255, 255, .12); animation: pulse 1s ease-in-out infinite alternate; }
   @keyframes pulse { to { opacity: .4; } }
 
+  .switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 32px;
+    height: 18px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, .25);
+    transition: background-color .16s ease;
+  }
+  .switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform .18s ${EASE};
+  }
+  [aria-checked="true"] > .switch { background: #3ea6ff; }
+  [aria-checked="true"] > .switch::after { transform: translateX(14px); }
+  /* Rows with a fixed icon in the check column (Original audio, Edit languages). */
+  .check.icon svg { opacity: .9; transform: none; }
+
   .icon { display: flex; flex-shrink: 0; }
   .icon svg { width: 18px; height: 18px; }
 
@@ -196,6 +221,6 @@ export const PANEL_CSS = `
   @media (prefers-reduced-motion: reduce) {
     .panel, .panel.open { transition: opacity .1s ease, visibility 0s; transform: none; }
     .view.forward, .view.backward { animation: none; }
-    .check svg { transition: none; }
+    .check svg, .switch, .switch::after { transition: none; }
   }
 `;

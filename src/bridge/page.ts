@@ -7,8 +7,20 @@
 //   setOption('captions', 'track', track)                    → show it (turns captions on); the
 //     track must be the player's own object: a bare { languageCode, kind: 'asr' } picks the
 //     uploaded track instead. Add translationLanguage: { languageCode, languageName } to translate.
+//
+// Audio (same day, a video with 21 audio tracks): getAvailableAudioTracks(), getAudioTrack(), and
+// setAudioTrack(track) with one of the player's own track objects. See src/audio.ts for telling the
+// original from a dub.
+import { isDubbedAudio, isOriginalAudio } from '../audio';
 import type { CurrentTrack, PlayerState, Track, TranslationLanguage } from '../tracks';
-import { REQUEST_EVENT, RESPONSE_EVENT, type Request, type Response } from './protocol';
+import {
+  type PageSettings,
+  REQUEST_EVENT,
+  RESPONSE_EVENT,
+  type Request,
+  type Response,
+  SETTINGS_EVENT,
+} from './protocol';
 
 interface RawTrack {
   languageCode?: string;
@@ -24,6 +36,9 @@ interface Player extends HTMLElement {
   getOption(module: 'captions', option: string, args?: object): unknown;
   setOption(module: 'captions', option: string, value: unknown): void;
   getVideoData?(): { video_id?: string };
+  getAvailableAudioTracks?(): unknown[];
+  getAudioTrack?(): unknown;
+  setAudioTrack?(track: unknown): boolean;
 }
 
 const player = () => {
@@ -90,7 +105,46 @@ function handle(request: Request): Response {
   return { id: request.id, ok: true, state: readState(p) };
 }
 
+/**
+ * Original audio: when a video starts in a dub (YouTube picks one to match the viewer's language),
+ * switch to the original. Only in the first seconds of each video, where YouTube makes its pick; a
+ * dub the viewer chooses by hand after that stays.
+ */
+function audioKeeper() {
+  const WINDOW_MS = 4000;
+  let enabled = false;
+  let video = '';
+  let since = 0;
+
+  document.addEventListener(SETTINGS_EVENT, (event) => {
+    try {
+      const settings: PageSettings = JSON.parse(String((event as CustomEvent).detail));
+      // Turned on mid-video: apply it now.
+      if (settings.originalAudio && !enabled) video = '';
+      enabled = settings.originalAudio;
+    } catch {}
+  });
+
+  setInterval(() => {
+    if (!enabled) return;
+    const p = player();
+    if (!p?.getAvailableAudioTracks || !p.getAudioTrack || !p.setAudioTrack) return;
+    if (p.classList.contains('ad-showing')) return;
+    const id = p.getVideoData?.()?.video_id ?? '';
+    const tracks = p.getAvailableAudioTracks() ?? [];
+    if (!id || !tracks.length) return;
+    if (id !== video) {
+      video = id;
+      since = Date.now();
+    }
+    if (Date.now() - since > WINDOW_MS || tracks.length < 2) return;
+    const original = tracks.find(isOriginalAudio);
+    if (original && isDubbedAudio(p.getAudioTrack())) p.setAudioTrack(original);
+  }, 250);
+}
+
 export function installPageBridge() {
+  audioKeeper();
   document.addEventListener(REQUEST_EVENT, (event) => {
     let request: Request;
     try {

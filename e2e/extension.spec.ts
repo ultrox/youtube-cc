@@ -182,6 +182,38 @@ test('keyboard: arrows move through the rows, a click outside closes', async ({ 
   await expect(panel(page)).toBeHidden();
 });
 
+const audioNow = (page: Page) =>
+  page.evaluate(() => (window as unknown as { audioNow(): string }).audioNow());
+const audioCalls = (page: Page) =>
+  page.evaluate(() => (window as unknown as { audioCalls: string[] }).audioCalls);
+
+test('a video YouTube starts in a dub switches to its original audio', async ({ page }) => {
+  await page.goto('https://www.youtube.com/watch?v=dub');
+  await expect.poll(() => audioNow(page)).toBe('en.4');
+  expect(await audioCalls(page)).toEqual(['en.4']); // once, not on every check
+});
+
+test('with Original audio off, the dub YouTube picked stays', async ({ page }) => {
+  await open(page);
+  const audio = panel(page).getByRole('switch', { name: /Original audio/ });
+  await expect(audio).toHaveAttribute('aria-checked', 'true'); // on by default
+  await audio.click();
+  await expect(audio).toHaveAttribute('aria-checked', 'false');
+
+  await page.goto('https://www.youtube.com/watch?v=dub');
+  await expect(chevron(page)).toBeVisible();
+  await page.waitForTimeout(1500); // several of the page script's checks
+  expect(await audioNow(page)).toBe('de.3');
+  expect(await audioCalls(page)).toEqual([]);
+});
+
+test('a video already playing its original audio is left alone', async ({ page }) => {
+  await page.goto('https://www.youtube.com/watch?v=dub-original');
+  await expect(chevron(page)).toBeVisible();
+  await page.waitForTimeout(1500);
+  expect(await audioCalls(page)).toEqual([]);
+});
+
 test('the chevron turns over while the panel is open', async ({ page }) => {
   await open(page);
   const svg = chevron(page).locator('svg');
