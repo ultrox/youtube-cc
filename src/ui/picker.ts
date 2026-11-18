@@ -335,10 +335,10 @@ export function mountPicker({ player, native, languages, setLanguages }: PickerO
   }
 
   on<KeyboardEvent>(panelHost, 'keydown', (event) => {
+    // Escape closes from any view, also while typing a search (the ← button goes back).
     if (event.key === 'Escape') {
       event.preventDefault();
-      if (view === 'edit') go('main', 'backward', 'edit');
-      else close(true);
+      close(true);
       return;
     }
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;

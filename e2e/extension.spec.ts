@@ -119,7 +119,7 @@ test('languages can be reordered and removed', async ({ page }) => {
   await panel(page).getByRole('button', { name: 'Remove Deutsch' }).click();
   expect(await names(panel(page).locator('.edit-row'))).toEqual(['Hrvatski']);
 
-  await page.keyboard.press('Escape'); // back to the main view
+  await panel(page).getByRole('button', { name: 'Back' }).click();
   await expect(row(page, 'Edit languages')).toBeVisible();
   expect(await names(panel(page).locator('.list'))).toEqual(['Hrvatski']);
 });
@@ -150,10 +150,13 @@ test('clicks and keys inside the panel stay away from YouTube’s player and sho
   });
   expect(leaked).toEqual({ clicks: 0, keys: [] });
 
-  await page.keyboard.press('Escape');
+  // Escape in the search closes the whole panel, back to the chevron.
   await page.keyboard.press('Escape');
   await expect(panel(page)).toBeHidden();
   await expect(chevron(page)).toBeFocused();
+  // …and the reopened panel starts at the main view.
+  await chevron(page).click();
+  await expect(row(page, 'Edit languages')).toBeVisible();
 });
 
 test('once closed, the panel’s area belongs to the video again', async ({ page }) => {
