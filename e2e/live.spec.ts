@@ -71,7 +71,17 @@ test('switches real YouTube subtitles: uploaded, auto-translated, back, off', as
   await expect.poll(() => showing(page)).toBe('.en → -');
 
   await chevron.click();
+  const box = await panel.boundingBox();
   await row('Off').click();
   await expect.poll(() => showing(page)).toBe('off');
+
+  // Where the panel was, a click reaches the video again (plays the paused video).
+  if (!box) throw new Error('panel has no box');
+  const state = () =>
+    page.evaluate(() =>
+      (document.getElementById('movie_player') as unknown as { getPlayerState(): number }).getPlayerState(),
+    );
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect.poll(state).toBe(1); // playing
   await context.close();
 });

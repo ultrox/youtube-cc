@@ -156,6 +156,17 @@ test('clicks and keys inside the panel stay away from YouTube’s player and sho
   await expect(chevron(page)).toBeFocused();
 });
 
+test('once closed, the panel’s area belongs to the video again', async ({ page }) => {
+  await open(page);
+  const box = await panel(page).boundingBox();
+  if (!box) throw new Error('panel has no box');
+  await page.keyboard.press('Escape');
+  await expect(panel(page)).toBeHidden();
+
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  expect(await page.evaluate(() => (window as unknown as { playerClicks: number }).playerClicks)).toBe(1);
+});
+
 test('keyboard: arrows move through the rows, a click outside closes', async ({ page }) => {
   await open(page);
   await expect(row(page, 'Off')).toBeFocused();

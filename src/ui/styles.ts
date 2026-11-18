@@ -46,6 +46,9 @@ export const PANEL_CSS = `
     font: 14px/1.35 "YouTube Sans", Roboto, Arial, sans-serif;
     color: #f1f1f1;
     -webkit-font-smoothing: antialiased;
+    /* The host keeps the panel's size while it's closed: without this it would catch the video's
+       clicks there (and picker.ts stops those from reaching the player). Only the open panel takes them. */
+    pointer-events: none;
   }
   * { box-sizing: border-box; }
 
@@ -68,6 +71,7 @@ export const PANEL_CSS = `
     transition: opacity .12s ease, transform .12s ${EASE}, visibility 0s linear .12s;
   }
   .panel.open {
+    pointer-events: auto;
     opacity: 1;
     visibility: visible;
     transform: none;
