@@ -1,0 +1,27 @@
+name: Store status
+
+# Manual check: are the store credentials valid, and what's live / in review?
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    environment: chrome-web-store
+    env:
+      CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+      CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+      CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+      CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0 # tags, so the rehearsal knows what's released
+      - uses: ./.github/actions/setup
+      - run: node scripts/store-status.mjs
+      # Same code path as a real release (zip → wxt submit), stopping right before upload.
+      - name: Release rehearsal (no upload)
+        run: pnpm release --dry-run --include-released

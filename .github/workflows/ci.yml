@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0 # changeset status + release dry-run need history and tags
+      - uses: ./.github/actions/setup
+
+      - name: Lint and format
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Unit tests
+        run: pnpm test
+      - name: Build and zip
+        run: pnpm zip
+
+      - name: Install Chromium for e2e
+        run: pnpm exec playwright install chromium
+      - name: E2E (built extension in real Chromium, YouTube-shaped page)
+        run: pnpm e2e
+
+      - name: Every user-facing change has a changeset
+        if: github.event_name == 'pull_request'
+        run: pnpm changeset status --since=origin/${{ github.base_ref }}
+      - name: What would be published
+        run: pnpm release --dry-run
+
+      - name: Upload zip
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: extension-zip
+          path: .output/*.zip
+          if-no-files-found: error
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: playwright-report
+          path: playwright-report

@@ -1,0 +1,51 @@
+name: Release
+
+# Two separate steps, on purpose:
+#  - every push to main refreshes the "Version packages" PR (never publishes);
+#  - publishing is manual: Actions → Release → Run workflow. Nothing reaches the store without that click.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # Pending changesets → open/refresh the "Version packages" PR.
+  version:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: changesets/action@v2.1.2
+        with:
+          version-script: pnpm version-packages
+          pr-title: Version packages
+          commit-message: Version packages
+
+  # Manual only. Submits the version on main if it has no `name@version` tag yet, so merge the
+  # Version packages PR first; with nothing unreleased it does nothing.
+  publish:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: chrome-web-store # holds the store credentials
+    permissions:
+      contents: write # push tags, create GitHub releases
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - run: pnpm release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}

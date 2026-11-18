@@ -1,0 +1,13 @@
+/* The only rules on YouTube's page itself; everything else is inside shadow roots (src/ui/styles.ts). */
+
+/* Hide the chevron whenever YouTube hides its CC button (ads, small players). */
+.ytp-subtitles-button[style*="display: none"] + .my-subtitles-chevron,
+.ytp-subtitles-button[hidden] + .my-subtitles-chevron {
+  display: none;
+}
+
+/* Keep the controls on screen while the panel is open, even when the mouse rests. */
+.my-subtitles-open .ytp-chrome-bottom,
+.my-subtitles-open .ytp-gradient-bottom {
+  opacity: 1 !important;
+}

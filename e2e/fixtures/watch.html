@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fixture - YouTube</title>
+    <style>
+      body { margin: 0; background: #0f0f0f; font-family: Roboto, Arial, sans-serif; }
+      #movie_player { position: relative; width: 960px; height: 540px; margin: 20px; background: #222; overflow: hidden; }
+      .ytp-chrome-bottom { position: absolute; left: 12px; right: 12px; bottom: 0; height: 48px; }
+      .ytp-right-controls { position: absolute; right: 0; top: 0; height: 48px; display: flex; }
+      .ytp-button { width: 48px; height: 48px; border: 0; background: none; color: #fff; padding: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="movie_player" class="html5-video-player">
+      <div class="ytp-chrome-bottom">
+        <div class="ytp-right-controls">
+          <button type="button" class="ytp-subtitles-button ytp-button" aria-pressed="false" aria-keyshortcuts="c">CC</button>
+          <button type="button" class="ytp-button ytp-settings-button" aria-expanded="false">⚙</button>
+          <button type="button" class="ytp-fullscreen-button ytp-button">⛶</button>
+        </div>
+      </div>
+    </div>
+    <script>
+      // A stand-in for YouTube's player caption API (src/bridge/page.ts lists what the real one does).
+      const scenario = new URLSearchParams(location.search).get('v') || 'many';
+      const t = (languageCode, kind = '', name = languageCode) => ({
+        languageCode,
+        languageName: name,
+        displayName: kind === 'asr' ? `${name} (auto-generated)` : name,
+        kind,
+        vss_id: `${kind === 'asr' ? 'a' : ''}.${languageCode}`,
+        is_translateable: true,
+      });
+      const TRACKS = {
+        many: [t('de', '', 'German'), t('en', '', 'English'), t('en', 'asr', 'English'), t('fr', '', 'French')],
+        asr: [t('en', 'asr', 'English')],
+        none: [],
+      }[scenario];
+      const LANGS = ['de', 'en', 'bs', 'hr', 'sr', 'fr', 'es', 'iw'].map((languageCode) => ({
+        languageCode,
+        languageName: languageCode,
+      }));
+
+      const player = document.getElementById('movie_player');
+      const cc = player.querySelector('.ytp-subtitles-button');
+      let current = null;
+      window.calls = [];
+      window.playerClicks = 0;
+      window.shortcutKeys = [];
+
+      const show = (track) => {
+        current = track;
+        cc.setAttribute('aria-pressed', String(!!track));
+      };
+      player.getVideoData = () => ({ video_id: scenario });
+      player.getOption = (module, option) => {
+        if (module !== 'captions') return undefined;
+        if (option === 'tracklist') return TRACKS.map((x) => ({ ...x }));
+        if (option === 'translationLanguages') return TRACKS.length ? LANGS : [];
+        if (option === 'track') return current ? { ...current } : {};
+      };
+      player.setOption = (module, option, value) => {
+        window.calls.push({ vss: value.vss_id, to: value.translationLanguage?.languageCode ?? null });
+        show(value);
+      };
+      cc.addEventListener('click', () => show(current ? null : TRACKS[0] ?? null));
+      player.addEventListener('click', () => window.playerClicks++);
+      // YouTube's shortcuts listen on the document.
+      document.addEventListener('keydown', (e) => window.shortcutKeys.push(e.key));
+    </script>
+  </body>
+</html>
