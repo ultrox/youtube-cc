@@ -1,7 +1,7 @@
 # Chrome Web Store listing: My Subtitles for YouTube
 
 Item `lekdckmokddhnlkdkbfihcfpplcomkok`: https://chromewebstore.google.com/detail/lekdckmokddhnlkdkbfihcfpplcomkok
-0.1.0 uploaded by hand and submitted for review on 2026-11-18. Screenshot: `store/screenshots/`.
+0.1.0 uploaded by hand and submitted for review on 2026-11-18 (resubmitted the same day with screenshot 2). Screenshot: `store/screenshots/`.
 
 ## Summary (from package.json `description`, ≤132 chars)
 
@@ -70,5 +70,4 @@ setting (chrome.storage.local, on the device).
 
 1. `store/screenshots/1-panel.jpg`: the panel over a TED talk, Bosanski auto-translated ✓, Original audio on.
 2. `store/screenshots/2-compare.jpg`: YouTube's own menu (50 tracks → Auto-translate, 156 more) next to
-   ours (4 languages, 2 clicks). Not in the store yet: the listing is locked while 0.1.0 is in review;
-   add it once that passes (Store listing → Screenshots, then submit; the change goes through review).
+   ours (4 languages, 2 clicks).
