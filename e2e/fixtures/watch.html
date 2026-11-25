@@ -13,6 +13,8 @@
   </head>
   <body>
     <div id="movie_player" class="html5-video-player">
+      <video><track kind="captions" /></video>
+      <div class="ytp-caption-window-container"></div>
       <div class="ytp-chrome-bottom">
         <div class="ytp-right-controls">
           <button type="button" class="ytp-subtitles-button ytp-button" aria-pressed="false" aria-keyshortcuts="c">CC</button>
@@ -37,6 +39,10 @@
         dub: [t('en', 'asr', 'English')],
         'dub-original': [t('en', 'asr', 'English')],
         asr: [t('en', 'asr', 'English')],
+        // Dual subtitles: "late" makes its caption request only when asked to reload, "nopot" makes
+        // it without the token YouTube wants.
+        late: [t('de', '', 'German'), t('en', '', 'English')],
+        nopot: [t('de', '', 'German'), t('en', '', 'English')],
         none: [],
       }[scenario];
       const LANGS = ['de', 'en', 'bs', 'hr', 'sr', 'fr', 'es', 'iw'].map((languageCode) => ({
@@ -51,9 +57,23 @@
       window.playerClicks = 0;
       window.shortcutKeys = [];
 
+      // The real player loads the showing track's lines from /api/timedtext, with a token (pot).
+      window.captionRequests = [];
+      const request = (track) => {
+        const url = new URL('/api/timedtext', location.origin);
+        url.searchParams.set('v', scenario);
+        url.searchParams.set('lang', track.languageCode);
+        if (track.kind) url.searchParams.set('kind', track.kind);
+        if (track.translationLanguage) url.searchParams.set('tlang', track.translationLanguage.languageCode);
+        url.searchParams.set('fmt', 'json3');
+        if (scenario !== 'nopot') url.searchParams.set('pot', 'token');
+        window.captionRequests.push(url.search);
+        fetch(url).catch(() => {});
+      };
       const show = (track) => {
         current = track;
         cc.setAttribute('aria-pressed', String(!!track));
+        if (track && scenario !== 'late') request(track);
       };
       player.getVideoData = () => ({ video_id: scenario });
       player.getOption = (module, option) => {
@@ -62,7 +82,15 @@
         if (option === 'translationLanguages') return TRACKS.length ? LANGS : [];
         if (option === 'track') return current ? { ...current } : {};
       };
+      player.getSubtitlesUserSettings = () => ({
+        fontSizeIncrement: 0,
+        color: '#fff',
+        textOpacity: 1,
+        background: '#080808',
+        backgroundOpacity: 0.75,
+      });
       player.setOption = (module, option, value) => {
+        if (option === 'reload') return current && request(current);
         window.calls.push({ vss: value.vss_id, to: value.translationLanguage?.languageCode ?? null });
         show(value);
       };

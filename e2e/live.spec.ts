@@ -17,12 +17,20 @@ const showing = (page: Page) =>
     return track?.vss_id ? `${track.vss_id} → ${track.translationLanguage?.languageCode ?? '-'}` : 'off';
   });
 
-test('switches real YouTube subtitles: uploaded, auto-translated, back, off', async () => {
-  test.setTimeout(150_000);
+/** Chromium with the extension, on the video, paused after any ad. */
+async function watch() {
   const context = await chromium.launchPersistentContext('', {
     channel: 'chromium',
     locale: 'de-DE',
-    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+    // To a headless browser, or one that says it is automated, YouTube gives empty caption data
+    // (2026-11-25), to its own player too.
+    headless: false,
+    ignoreDefaultArgs: ['--enable-automation'],
+    args: [
+      `--disable-extensions-except=${extensionPath}`,
+      `--load-extension=${extensionPath}`,
+      '--disable-blink-features=AutomationControlled',
+    ],
   });
   const page = await context.newPage();
   await page.goto(VIDEO);
@@ -43,6 +51,12 @@ test('switches real YouTube subtitles: uploaded, auto-translated, back, off', as
   await page.evaluate(() =>
     (document.getElementById('movie_player') as unknown as { pauseVideo(): void }).pauseVideo(),
   );
+  return { context, page };
+}
+
+test('switches real YouTube subtitles: uploaded, auto-translated, back, off', async () => {
+  test.setTimeout(150_000);
+  const { context, page } = await watch();
 
   const chevron = page.getByRole('button', { name: 'Subtitle languages' });
   const panel = page.getByRole('dialog', { name: 'Subtitle languages' });
@@ -83,5 +97,60 @@ test('switches real YouTube subtitles: uploaded, auto-translated, back, off', as
     );
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect.poll(state).toBe(1); // playing
+  await context.close();
+});
+
+test('dual subtitles: two real tracks, in step with the video', async () => {
+  test.setTimeout(150_000);
+  const { context, page } = await watch();
+  const chevron = page.getByRole('button', { name: 'Subtitle languages' });
+  const panel = page.getByRole('dialog', { name: 'Subtitle languages' });
+  const player = page.locator('#movie_player');
+  const lines = () => page.locator('.my-subtitles-lines .row:not([hidden]) .line').allTextContents();
+
+  await chevron.click();
+  await panel.getByRole('button', { name: 'Edit languages' }).click();
+  for (const search of ['engl', 'bosn']) {
+    await panel.getByRole('searchbox').fill(search);
+    await panel.getByRole('searchbox').press('Enter');
+  }
+  await panel.getByRole('button', { name: 'Back' }).click();
+
+  await panel.getByRole('switch', { name: /Dual subtitles/ }).click();
+  await expect.poll(() => showing(page)).toBe('.de → -');
+  await expect(panel.getByRole('radio', { name: 'English' })).toHaveAttribute('aria-checked', 'true');
+  // A moment with a line in both languages; seeking starts the video, so pause it again.
+  await page.evaluate(() => {
+    const yt = document.getElementById('movie_player') as unknown as {
+      seekTo(seconds: number, allowSeekAhead: boolean): void;
+      pauseVideo(): void;
+    };
+    yt.seekTo(30, true);
+    yt.pauseVideo();
+  });
+  await expect
+    .poll(() => page.evaluate(() => (document.querySelector('video') as HTMLVideoElement).paused))
+    .toBe(true);
+  await expect(player).toHaveClass(/my-subtitles-dual/, { timeout: 20_000 });
+  await expect.poll(async () => (await lines()).length).toBe(2);
+  const [german, english] = await lines();
+  expect(german).not.toBe(english);
+  if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/dual-panel.png` });
+
+  // An auto-translated second line, then swapped to the top.
+  await panel.getByRole('radio', { name: 'Bosanski' }).click();
+  await expect.poll(lines).toHaveLength(2);
+  await expect.poll(async () => (await lines())[1]).not.toBe(english);
+  expect((await lines())[0]).toBe(german);
+  await panel.getByRole('button', { name: /Bosanski/ }).click();
+  await expect.poll(() => showing(page)).toMatch(/ → bs$/);
+  await expect.poll(async () => (await lines())[1], { timeout: 20_000 }).toBe(german);
+  if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/dual-video.png` });
+
+  // Subtitles off: nothing of ours left on the video.
+  await chevron.click();
+  await panel.getByRole('button', { name: 'Off' }).click();
+  await expect(player).not.toHaveClass(/my-subtitles-dual/);
+  expect(await lines()).toEqual([]);
   await context.close();
 });

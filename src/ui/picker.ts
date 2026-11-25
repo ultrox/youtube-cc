@@ -4,8 +4,9 @@
 // subtitles, auto-generated, auto-translated, or not at all). Edit view: search to add languages,
 // reorder and remove them. YouTube's own CC button stays as it is and keeps toggling captions.
 import { ask } from '../bridge/client';
+import { pickBottom, pickTop, type Showing, secondLine } from '../dual';
 import { CATALOGUE, canonical, type LanguageNames, namesOf, searchLanguages } from '../languages';
-import { canAdd } from '../settings';
+import { canAdd, type Dual } from '../settings';
 import { bestChoice, type Choice, currentLanguage, type PlayerState } from '../tracks';
 import { el, icon } from './dom';
 import { t } from './strings';
@@ -24,6 +25,9 @@ export interface PickerOptions {
   /** "Original audio": never start a video in a dub. */
   originalAudio: () => boolean;
   setOriginalAudio: (on: boolean) => Promise<void>;
+  /** Dual subtitles: a second line in another of the user's languages (src/dual.ts). */
+  dual: () => Dual;
+  setDual: (dual: Dual) => Promise<void>;
 }
 
 export interface Picker {
@@ -31,7 +35,7 @@ export interface Picker {
   readonly chevronHost: HTMLElement;
   /** Still in YouTube's control bar, right after the CC button? */
   attached(): boolean;
-  /** The languages or the audio setting changed (here or in another tab). */
+  /** The languages or a switch changed (here or in another tab). */
   settingsChanged(): void;
   /** Video changed: drop what we knew about the old one. */
   reset(): void;
@@ -60,6 +64,8 @@ export function mountPicker({
   setLanguages,
   originalAudio,
   setOriginalAudio,
+  dual,
+  setDual,
 }: PickerOptions): Picker {
   const controller = new AbortController();
   const { signal } = controller;
@@ -197,6 +203,7 @@ export function mountPicker({
     }
 
     view.append(el('div', { class: 'separator' }));
+    view.append(...dualRows(mine));
     const audio = el(
       'button',
       {
@@ -227,6 +234,64 @@ export function mountPicker({
     edit.addEventListener('click', () => go('edit', 'forward'));
     view.append(edit);
     return view;
+  }
+
+  /** What's on the video now: the list's language on top, the second line below. */
+  const showing = (): Showing => ({
+    top: state ? currentLanguage(state.current) : null,
+    bottom: (state && secondLine(dual(), languages(), state)?.language) ?? null,
+  });
+
+  /** The Dual subtitles switch and, while it's on, the language of the second line. */
+  function dualRows(mine: string[]): HTMLElement[] {
+    const on = dual().on;
+    const toggle = el(
+      'button',
+      { type: 'button', class: 'row', role: 'switch', 'aria-checked': String(on), 'data-key': 'dual' },
+      el('span', { class: 'check icon' }, icon('dual')),
+      el(
+        'span',
+        { class: 'label' },
+        el('span', { class: 'name' }, t.dual),
+        el('span', { class: 'local' }, t.dualHint),
+      ),
+      el('span', { class: 'switch', 'aria-hidden': 'true' }),
+    );
+    toggle.title = t.dualTitle;
+    toggle.addEventListener('click', () => void toggleDual());
+    if (!on) return [toggle];
+    if (mine.length < 2) return [toggle, el('div', { class: 'note' }, t.dualNeedsTwo)];
+
+    const now = showing();
+    // With subtitles off there is nothing below yet: show the pair's stored second line.
+    const stored = dual().bottom;
+    const selected = now.bottom ?? (stored && mine.includes(stored) && stored !== now.top ? stored : null);
+    const chips = el(
+      'div',
+      { class: 'chips', role: 'radiogroup', 'aria-label': t.secondLine },
+      el('span', { class: 'chips-label', 'aria-hidden': 'true' }, t.secondLine),
+    );
+    for (const code of mine) {
+      const usable = !!state && code !== now.top && !!bestChoice(code, state);
+      const chip = el(
+        'button',
+        {
+          type: 'button',
+          class: 'chip',
+          role: 'radio',
+          lang: code,
+          'aria-checked': String(code === selected),
+          'aria-disabled': usable ? undefined : 'true',
+          'data-key': `second:${code}`,
+        },
+        names(code).native,
+      );
+      chip.addEventListener('click', () => {
+        if (usable) void setDual(pickBottom(dual(), code, showing()));
+      });
+      chips.append(chip);
+    }
+    return [toggle, chips];
   }
 
   function editView() {
@@ -420,10 +485,25 @@ export function mountPicker({
     }
   }
 
-  async function select(code: string, choice: Choice) {
+  async function toggleDual() {
+    const on = !dual().on;
+    await setDual({ ...dual(), on });
+    // Turned on while subtitles are off: show the pair right away, the panel stays for the second line.
+    if (!on || !state || state.current) return;
+    const current = state;
+    const mine = languages();
+    const first = [dual().top, ...mine].find(
+      (code): code is string => !!code && mine.includes(code) && !!bestChoice(code, current),
+    );
+    const choice = first && bestChoice(first, current);
+    if (first && choice) await select(first, choice, true);
+  }
+
+  async function select(code: string, choice: Choice, stay = false) {
     if (busy) return;
     busy = true;
     const token = generation;
+    const before = showing();
     try {
       let next = await ask({ action: 'select', vssId: choice.vssId, translateTo: choice.translateTo });
       // The player usually reports the new track at once; give it a moment if not.
@@ -434,7 +514,10 @@ export function mountPicker({
       if (token !== generation) return;
       state = next;
       if (currentLanguage(next.current) !== code) throw new Error('not switched');
-      close(true);
+      // The pair follows the pick; picking the language of the second line swaps the two.
+      if (dual().on) await setDual(pickTop(dual(), code, before));
+      if (stay) render();
+      else close(true);
     } catch {
       if (token !== generation) return;
       problem = 'failed';

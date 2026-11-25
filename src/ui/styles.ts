@@ -168,6 +168,32 @@ export const PANEL_CSS = `
   /* Rows with a fixed icon in the check column (Original audio, Edit languages). */
   .check.icon svg { opacity: .9; transform: none; }
 
+  /* Dual subtitles: the language of the second line, one of the user's. */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px 8px 38px;
+    flex-shrink: 0;
+  }
+  .chips-label { width: 100%; color: #aaa; font-size: 12px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, .1);
+    font-size: 13px;
+    white-space: nowrap;
+    transition: background-color .12s ease, color .12s ease;
+  }
+  .chip:hover:not([aria-disabled="true"]) { background: rgba(255, 255, 255, .2); }
+  .chip[aria-checked="true"] { background: #f1f1f1; color: #0f0f0f; font-weight: 500; }
+  .chip[aria-disabled="true"] { opacity: .4; cursor: default; }
+
   .icon { display: flex; flex-shrink: 0; }
   .icon svg { width: 18px; height: 18px; }
 
@@ -221,6 +247,43 @@ export const PANEL_CSS = `
   @media (prefers-reduced-motion: reduce) {
     .panel, .panel.open { transition: opacity .1s ease, visibility 0s; transform: none; }
     .view.forward, .view.backward { animation: none; }
-    .check svg, .switch, .switch::after { transition: none; }
+    .check svg, .switch, .switch::after, .chip { transition: none; }
   }
+`;
+
+/** Dual subtitles on the video (src/ui/lines.ts). Sizes and colours come from YouTube's captions. */
+export const LINES_CSS = `
+  :host {
+    all: initial;
+    position: absolute;
+    z-index: 40;
+    left: 0;
+    right: 0;
+    bottom: calc(2% + var(--lift, 0px));
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    font: calc(var(--size, 16px) * var(--scale, 1))/1.36 "YouTube Noto", Roboto, Arial, Helvetica, Verdana, "PT Sans Caption", sans-serif;
+    text-align: center;
+    transition: bottom .25s cubic-bezier(0, 0, .2, 1);
+  }
+  :host([data-on]) { display: flex; }
+
+  .row { max-width: 92%; text-wrap: balance; }
+  .row[hidden] { display: none; }
+  /* The second language: set apart, smaller and in another colour, so it never reads as a second
+     line of the first. */
+  .row.bottom { margin-top: .32em; font-size: .86em; }
+  .row.bottom .line { color: var(--second, #ffe066); }
+  .line {
+    padding: .09em .3em;
+    color: var(--color, #fff);
+    background: var(--background, rgba(8, 8, 8, .75));
+    white-space: pre-wrap;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
+  @media (prefers-reduced-motion: reduce) { :host { transition: none; } }
 `;

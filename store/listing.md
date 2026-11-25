@@ -28,6 +28,12 @@ YOUR LANGUAGES, YOUR ORDER
 (type "deutsch" or "german"), then reorder or remove.
 • Saved in your browser. Works the same on every video.
 
+TWO LANGUAGES AT ONCE
+• "Dual subtitles": one switch, and the video shows two of your languages, one above the other.
+Good for learning a language, or watching with someone who reads another one.
+• The language you pick in the list is the top line; choose the second line right below the switch.
+Pick the second line's language in the list and the two swap.
+
 NO SURPRISE DUBBING
 • YouTube now plays many videos dubbed into your language. "Original audio" (on by default) starts
 every video in the language it was made in. Turn it off in the panel, or pick a dub in YouTube's
@@ -36,7 +42,7 @@ settings whenever you want one.
 STAYS OUT OF THE WAY
 • YouTube's own CC button and the C shortcut work as always.
 • Works with the keyboard (arrow keys, Enter, Escape).
-• No account, no tracking, no network requests: it only talks to the YouTube player on the page.
+• No account, no tracking, no server: it only talks to YouTube, on the page you are watching.
 
 Free and open source: https://github.com/ultrox/youtube-cc
 
@@ -53,18 +59,20 @@ CC button.
 
 ## Permission justifications
 
-- `storage`: saves the user's list of subtitle languages and the "Original audio" setting on their
-  device.
+- `storage`: saves the user's list of subtitle languages, the "Original audio" and "Dual subtitles"
+  settings and the pair of languages for dual subtitles on their device.
 - Content scripts on `https://www.youtube.com/*`: add the language picker next to the video player's CC
   button, switch the player's subtitle track when the user picks a language, and (if "Original audio"
-  is on) switch a dubbed audio track to the video's original one.
+  is on) switch a dubbed audio track to the video's original one. With "Dual subtitles" on, the script
+  requests the second language's subtitles of the playing video from www.youtube.com (the request
+  YouTube's player makes for the first) and draws both lines in the player.
 
-No remote code. Nothing is sent anywhere.
+No remote code. Nothing is sent anywhere but that request to YouTube.
 
 ## Data
 
-Collects nothing. The only stored data is the list of language codes the user picked and one on/off
-setting (chrome.storage.local, on the device).
+Collects nothing. The only stored data is the list of language codes the user picked, two on/off
+settings and the pair of languages for dual subtitles (chrome.storage.local, on the device).
 
 ## Screenshots (1280×800)
 

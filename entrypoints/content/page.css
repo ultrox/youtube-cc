@@ -11,3 +11,12 @@
 .my-subtitles-open .ytp-gradient-bottom {
   opacity: 1 !important;
 }
+
+/* Dual subtitles: our two lines stand in for YouTube's captions (src/ui/lines.ts). YouTube keeps
+   drawing its own underneath, unseen, so they are back the moment this class goes. */
+.my-subtitles-dual .ytp-caption-window-container {
+  opacity: 0 !important;
+}
+.my-subtitles-dual .ytp-caption-window-container * {
+  pointer-events: none !important;
+}

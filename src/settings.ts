@@ -1,4 +1,4 @@
-// The user's languages, kept in chrome.storage.local (on this device, never sent anywhere).
+// The user's languages and switches, kept in chrome.storage.local (on this device, never sent anywhere).
 import { browser } from 'wxt/browser';
 import { CATALOGUE, canonical, defaultLanguages } from './languages';
 
@@ -45,21 +45,43 @@ export async function saveOriginalAudio(on: boolean) {
   await browser.storage.local.set({ [ORIGINAL_AUDIO_KEY]: on });
 }
 
-export function onOriginalAudioChanged(listener: (on: boolean) => void): () => void {
+export const DUAL_KEY = 'dual';
+
+/** Dual subtitles: two of the user's languages at once (src/dual.ts). */
+export interface Dual {
+  on: boolean;
+  /** The pair the user last put together, as canonical codes; null until they pick. */
+  top: string | null;
+  bottom: string | null;
+}
+
+export function parseDual(raw: unknown): Dual {
+  const stored = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const code = (value: unknown) => (typeof value === 'string' && value.trim() ? canonical(value) : null);
+  return { on: stored.on === true, top: code(stored.top), bottom: code(stored.bottom) };
+}
+
+export async function loadDual(): Promise<Dual> {
+  return parseDual((await browser.storage.local.get(DUAL_KEY))[DUAL_KEY]);
+}
+
+export async function saveDual(dual: Dual) {
+  await browser.storage.local.set({ [DUAL_KEY]: { ...dual } });
+}
+
+/** Changes to one stored value, from any tab (or the user's other windows). */
+function onStored<T>(key: string, parse: (raw: unknown) => T, listener: (value: T) => void): () => void {
   const handle = (changes: Record<string, { newValue?: unknown }>, area: string) => {
-    if (area === 'local' && ORIGINAL_AUDIO_KEY in changes)
-      listener(parseOriginalAudio(changes[ORIGINAL_AUDIO_KEY]?.newValue));
+    if (area === 'local' && key in changes) listener(parse(changes[key]?.newValue));
   };
   browser.storage.onChanged.addListener(handle);
   return () => browser.storage.onChanged.removeListener(handle);
 }
 
-/** Changes from any tab (or the user's other windows). */
-export function onLanguagesChanged(listener: (languages: string[]) => void): () => void {
-  const handle = (changes: Record<string, { newValue?: unknown }>, area: string) => {
-    if (area !== 'local' || !(LANGUAGES_KEY in changes)) return;
-    listener(parseLanguages(changes[LANGUAGES_KEY]?.newValue) ?? []);
-  };
-  browser.storage.onChanged.addListener(handle);
-  return () => browser.storage.onChanged.removeListener(handle);
-}
+export const onLanguagesChanged = (listener: (languages: string[]) => void) =>
+  onStored(LANGUAGES_KEY, (raw) => parseLanguages(raw) ?? [], listener);
+
+export const onOriginalAudioChanged = (listener: (on: boolean) => void) =>
+  onStored(ORIGINAL_AUDIO_KEY, parseOriginalAudio, listener);
+
+export const onDualChanged = (listener: (dual: Dual) => void) => onStored(DUAL_KEY, parseDual, listener);

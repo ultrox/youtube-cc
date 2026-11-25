@@ -27,11 +27,23 @@ export interface CurrentTrack {
   translateTo?: string;
 }
 
+/** How the viewer set YouTube's captions to look (Settings → Subtitles → Options). */
+export interface CaptionStyle {
+  /** Font size relative to YouTube's default: 0.5 to 2. */
+  scale: number;
+  /** CSS colours, with their opacity. */
+  color: string;
+  background: string;
+}
+
 export interface PlayerState {
   videoId: string;
   tracks: Track[];
   translations: TranslationLanguage[];
   current: CurrentTrack | null;
+  captionStyle?: CaptionStyle;
+  /** An ad is playing: the video's subtitles don't apply. */
+  ad?: boolean;
 }
 
 /** A way to show subtitles in a language: a track as is, or a track auto-translated. */

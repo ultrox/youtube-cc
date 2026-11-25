@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('wxt/browser', () => ({ browser: {} }));
-const { canAdd, parseLanguages } = await import('../src/settings');
+const { canAdd, parseDual, parseLanguages } = await import('../src/settings');
 
 describe('parseLanguages', () => {
   it('cleans, canonicalises and deduplicates', () => {
@@ -27,5 +27,22 @@ describe('parseLanguages', () => {
     expect(parseLanguages(many)).toHaveLength(12);
     expect(canAdd(many.slice(0, 11))).toBe(true);
     expect(canAdd(many.slice(0, 12))).toBe(false);
+  });
+});
+
+describe('parseDual', () => {
+  it('is off with no pair until the user turns it on', () => {
+    for (const raw of [undefined, null, 'on', [], { on: 'yes' }]) {
+      expect(parseDual(raw)).toEqual({ on: false, top: null, bottom: null });
+    }
+  });
+
+  it('keeps the switch and the pair, as canonical codes', () => {
+    expect(parseDual({ on: true, top: 'de-CH', bottom: 'iw' })).toEqual({
+      on: true,
+      top: 'de',
+      bottom: 'he',
+    });
+    expect(parseDual({ on: true, top: '', bottom: 3 })).toEqual({ on: true, top: null, bottom: null });
   });
 });

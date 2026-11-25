@@ -18,6 +18,11 @@ export const t = {
   originalAudioHint: 'never dubbed',
   originalAudioTitle:
     'Start every video in the language it was made in, even when YouTube would play a dub. You can still pick a dub in YouTube’s settings.',
+  dual: 'Dual subtitles',
+  dualHint: 'two languages',
+  dualTitle: 'Show two of your languages at once: the one you pick in the list, and a second line below it.',
+  secondLine: 'Second line',
+  dualNeedsTwo: 'Add another language to pair it with.',
   edit: 'Edit languages',
   addFirst: 'Add your languages',
   back: 'Back',
