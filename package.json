@@ -1,7 +1,7 @@
 {
   "name": "youtube-cc",
   "description": "Only the subtitle languages you actually use: pick your few languages once, then switch YouTube captions in one click.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "license": "MIT",
